@@ -33,6 +33,12 @@ if [[ $MODEL ]]; then
 	"$SCRIPTDIR"/fetch-model.py "$MODEL" $VOLUME/text-generation-webui/models >>$VOLUME/logs/fetch-model.log 2>&1
 fi
 
+ARGS=()
+if [[ $GPTQ_LORA ]]; then
+	pip3 install git+https://github.com/sterlind/GPTQ-for-LLaMa.git@lora_4bit
+	#PICKUPHERE -- update args to use loader gptq-for-llama and monkeypatch
+	ARGS=("${ARGS[@]}" --monkey-patch --loader gptq-for-llama --wbits 4 --groupsize 128 --model_type llama)
+fi
 # Update text-generation-webui to the latest commit
 cd /workspace/text-generation-webui && git pull
 
@@ -43,7 +49,7 @@ fi
 
 python3 /root/scripts/rp_handler.py >/workspace/logs/rp_handler.log 2>&1 &
 
-ARGS=()
+
 while true; do
 	# If the user wants to stop the UI from auto launching, they can run:
 	# touch $VOLUME/do.not.launch.UI
@@ -52,7 +58,7 @@ while true; do
 		if [[ -f /tmp/text-gen-model ]]; then
 			# If this file exists, we successfully downloaded a model file or folder
 			# Therefore we auto load this model
-			ARGS=(--model "$(</tmp/text-gen-model)")
+			ARGS=("${ARGS[@]}" --model "$(</tmp/text-gen-model)")
 		fi
 		if [[ ${UI_ARGS} ]]; then
 			# Passed arguments in the template
